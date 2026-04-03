@@ -1,9 +1,209 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Users, Plus, Clock, Zap, MessageCircle, DoorOpen } from 'lucide-react'
+import { X, Users, Plus, Clock, Zap, MessageCircle, DoorOpen, Trophy, Medal, Crown, TrendingUp, Flame } from 'lucide-react'
 import { useDashboardStore, type StudyRoom, type StudyPeer } from '@/lib/store'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+
+// Fake leaderboard data
+const leaderboardData = [
+  { rank: 1, name: 'Arjun K.', avatar: 'AK', score: 2850, streak: 14, hoursThisWeek: 32, trend: 'up', badge: 'gold' },
+  { rank: 2, name: 'Priya S.', avatar: 'PS', score: 2720, streak: 11, hoursThisWeek: 28, trend: 'up', badge: 'silver' },
+  { rank: 3, name: 'Rahul M.', avatar: 'RM', score: 2680, streak: 9, hoursThisWeek: 26, trend: 'same', badge: 'bronze' },
+  { rank: 4, name: 'You', avatar: 'ME', score: 2450, streak: 7, hoursThisWeek: 22, trend: 'up', badge: null, isCurrentUser: true },
+  { rank: 5, name: 'Sneha V.', avatar: 'SV', score: 2380, streak: 6, hoursThisWeek: 20, trend: 'down', badge: null },
+  { rank: 6, name: 'Vikram R.', avatar: 'VR', score: 2290, streak: 5, hoursThisWeek: 18, trend: 'up', badge: null },
+  { rank: 7, name: 'Anita P.', avatar: 'AP', score: 2150, streak: 4, hoursThisWeek: 16, trend: 'same', badge: null },
+  { rank: 8, name: 'Karthik D.', avatar: 'KD', score: 2080, streak: 3, hoursThisWeek: 14, trend: 'down', badge: null },
+]
+
+const badgeColors = {
+  gold: 'from-yellow-400 to-amber-500',
+  silver: 'from-slate-300 to-slate-400',
+  bronze: 'from-orange-400 to-orange-600',
+}
+
+const badgeIcons = {
+  gold: Crown,
+  silver: Medal,
+  bronze: Medal,
+}
+
+function LeaderboardEntry({ entry, index }: { entry: typeof leaderboardData[0]; index: number }) {
+  const BadgeIcon = entry.badge ? badgeIcons[entry.badge as keyof typeof badgeIcons] : null
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className={`
+        flex items-center gap-3 p-3 rounded-xl transition-all
+        ${entry.isCurrentUser 
+          ? 'bg-primary/20 border border-primary/30 ring-2 ring-primary/20' 
+          : 'bg-muted/30 hover:bg-muted/50 border border-transparent'
+        }
+      `}
+    >
+      {/* Rank */}
+      <div className="w-8 text-center">
+        {entry.badge ? (
+          <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${badgeColors[entry.badge as keyof typeof badgeColors]} flex items-center justify-center shadow-lg`}>
+            {BadgeIcon && <BadgeIcon className="w-4 h-4 text-white" />}
+          </div>
+        ) : (
+          <span className="text-lg font-bold text-muted-foreground">#{entry.rank}</span>
+        )}
+      </div>
+
+      {/* Avatar */}
+      <div className={`
+        w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white
+        ${entry.isCurrentUser 
+          ? 'bg-gradient-to-br from-primary to-accent ring-2 ring-primary/50' 
+          : 'bg-gradient-to-br from-slate-500 to-slate-600'
+        }
+      `}>
+        {entry.avatar}
+      </div>
+
+      {/* Name & Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={`font-semibold text-sm truncate ${entry.isCurrentUser ? 'text-primary' : 'text-card-foreground'}`}>
+            {entry.name}
+          </span>
+          {entry.isCurrentUser && (
+            <Badge variant="outline" className="text-xs bg-primary/20 text-primary border-primary/30">
+              You
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+          <span className="flex items-center gap-1">
+            <Flame className="w-3 h-3 text-orange-500" />
+            {entry.streak} day streak
+          </span>
+          <span>{entry.hoursThisWeek}h this week</span>
+        </div>
+      </div>
+
+      {/* Score & Trend */}
+      <div className="text-right">
+        <div className="font-bold text-card-foreground">{entry.score.toLocaleString()}</div>
+        <div className={`flex items-center justify-end gap-1 text-xs ${
+          entry.trend === 'up' ? 'text-green-500' : 
+          entry.trend === 'down' ? 'text-red-500' : 
+          'text-muted-foreground'
+        }`}>
+          {entry.trend === 'up' && <TrendingUp className="w-3 h-3" />}
+          {entry.trend === 'down' && <TrendingUp className="w-3 h-3 rotate-180" />}
+          <span>pts</span>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+function Leaderboard() {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-card-foreground flex items-center gap-2">
+          <Trophy className="w-4 h-4 text-yellow-500" />
+          Weekly Leaderboard
+        </h3>
+        <Badge variant="outline" className="text-xs">
+          <Clock className="w-3 h-3 mr-1" />
+          Resets in 3d 14h
+        </Badge>
+      </div>
+
+      {/* Top 3 Podium */}
+      <div className="flex items-end justify-center gap-2 py-4 bg-gradient-to-b from-muted/50 to-transparent rounded-xl">
+        {/* Second Place */}
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-col items-center"
+        >
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center text-xs font-bold text-white mb-2 shadow-lg">
+            {leaderboardData[1].avatar}
+          </div>
+          <div className="text-xs font-medium text-card-foreground">{leaderboardData[1].name}</div>
+          <div className="text-xs text-muted-foreground">{leaderboardData[1].score}</div>
+          <div className="w-14 h-16 bg-gradient-to-t from-slate-400 to-slate-300 rounded-t-lg mt-2 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">2</span>
+          </div>
+        </motion.div>
+
+        {/* First Place */}
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="flex flex-col items-center -mt-4"
+        >
+          <motion.div
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <Crown className="w-6 h-6 text-yellow-500 mb-1" />
+          </motion.div>
+          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-sm font-bold text-white mb-2 shadow-lg ring-2 ring-yellow-300/50">
+            {leaderboardData[0].avatar}
+          </div>
+          <div className="text-sm font-semibold text-card-foreground">{leaderboardData[0].name}</div>
+          <div className="text-xs text-muted-foreground">{leaderboardData[0].score}</div>
+          <div className="w-16 h-20 bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-t-lg mt-2 flex items-center justify-center">
+            <span className="text-white font-bold text-xl">1</span>
+          </div>
+        </motion.div>
+
+        {/* Third Place */}
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-col items-center"
+        >
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-xs font-bold text-white mb-2 shadow-lg">
+            {leaderboardData[2].avatar}
+          </div>
+          <div className="text-xs font-medium text-card-foreground">{leaderboardData[2].name}</div>
+          <div className="text-xs text-muted-foreground">{leaderboardData[2].score}</div>
+          <div className="w-14 h-12 bg-gradient-to-t from-orange-600 to-orange-500 rounded-t-lg mt-2 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">3</span>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Full leaderboard list */}
+      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+        {leaderboardData.slice(3).map((entry, index) => (
+          <LeaderboardEntry key={entry.rank} entry={entry} index={index} />
+        ))}
+      </div>
+
+      {/* Your stats summary */}
+      <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-card-foreground">Your Position</p>
+            <p className="text-xs text-muted-foreground">Keep pushing to reach top 3!</p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-primary">#4</p>
+            <p className="text-xs text-green-500 flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" /> +2 from last week
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const statusColors = {
   studying: 'bg-green-500',
@@ -155,6 +355,9 @@ export function PeerStudyCircle() {
 
             {/* Content */}
             <div className="p-6 space-y-6">
+              {/* Leaderboard */}
+              <Leaderboard />
+
               {/* Online Peers */}
               <div>
                 <h3 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">

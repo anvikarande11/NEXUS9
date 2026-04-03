@@ -1,9 +1,9 @@
 'use client'
 
-// CSS-based 3D Globe Component - no Three.js required
-import React from 'react'
+// CSS-based Mini Globe with Realistic Earth - for sidebar
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { mockSubjects, type Subject } from '@/lib/mock-data'
+import { mockSubjects } from '@/lib/mock-data'
 import { useDashboardStore } from '@/lib/store'
 import {
   Tooltip,
@@ -12,14 +12,23 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-// Continent data with positions for CSS 3D
-const continentData = [
-  { id: '2', name: 'Data Structures', angle: 0, elevation: 20 },
-  { id: '6', name: 'Mathematics', angle: 60, elevation: -30 },
-  { id: '1', name: 'DBMS', angle: 120, elevation: 35 },
-  { id: '5', name: 'Machine Learning', angle: 180, elevation: 0 },
-  { id: '3', name: 'Operating Systems', angle: 240, elevation: 25 },
-  { id: '4', name: 'Computer Networks', angle: 300, elevation: -25 },
+// Simplified continent paths for mini view
+const miniContinents = {
+  northAmerica: 'M 25,12 C 30,10 35,12 38,16 L 36,22 C 33,25 28,24 26,20 Z',
+  southAmerica: 'M 32,28 C 34,26 37,28 38,32 L 36,40 C 34,42 31,40 31,36 Z',
+  europe: 'M 45,14 C 48,12 52,14 52,18 L 49,20 C 46,20 44,17 45,14 Z',
+  africa: 'M 46,22 C 50,20 54,24 54,30 L 52,38 C 48,40 44,36 45,28 Z',
+  asia: 'M 54,12 C 62,10 70,14 72,22 L 68,30 C 62,32 56,28 56,20 Z',
+  oceania: 'M 66,36 C 70,34 74,38 74,42 L 70,44 C 66,44 64,40 66,36 Z',
+}
+
+const continentSubjects = [
+  { key: 'northAmerica', subjectId: '2' },
+  { key: 'southAmerica', subjectId: '6' },
+  { key: 'europe', subjectId: '1' },
+  { key: 'africa', subjectId: '5' },
+  { key: 'asia', subjectId: '3' },
+  { key: 'oceania', subjectId: '4' },
 ]
 
 function getColorFromScore(score: number): string {
@@ -30,61 +39,101 @@ function getColorFromScore(score: number): string {
 
 export function MiniGlobe() {
   const { setCurrentView } = useDashboardStore()
+  const [rotation, setRotation] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRotation(prev => (prev + 0.5) % 360)
+    }, 50)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <TooltipProvider delayDuration={0}>
       <Tooltip>
         <TooltipTrigger asChild>
           <motion.button
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setCurrentView('subject-health')}
-            className="w-12 h-12 mx-auto rounded-xl overflow-hidden border border-primary/30 bg-gradient-to-b from-primary/10 to-background/50 hover:border-primary/50 transition-all cursor-pointer relative"
-            style={{ perspective: '200px' }}
+            className="w-12 h-12 mx-auto rounded-xl overflow-hidden border border-blue-500/30 bg-gradient-to-b from-slate-900 to-slate-950 hover:border-blue-400/50 transition-all cursor-pointer relative"
           >
-            {/* Globe container with CSS 3D */}
-            <div 
-              className="absolute inset-0 flex items-center justify-center"
-              style={{ transformStyle: 'preserve-3d' }}
-            >
-              {/* Base sphere */}
+            {/* Stars */}
+            <div className="absolute inset-0">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-0.5 h-0.5 bg-white/40 rounded-full"
+                  style={{
+                    left: `${10 + Math.random() * 80}%`,
+                    top: `${10 + Math.random() * 80}%`,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Globe */}
+            <div className="absolute inset-1 flex items-center justify-center">
               <motion.div
-                animate={{ rotateY: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                className="w-9 h-9 rounded-full relative"
-                style={{ 
-                  transformStyle: 'preserve-3d',
-                  background: 'radial-gradient(circle at 30% 30%, #3b82f6, #1e3a8a, #0c2d57)',
-                  boxShadow: 'inset -4px -4px 8px rgba(0,0,0,0.3), inset 2px 2px 4px rgba(255,255,255,0.1)'
+                className="w-9 h-9 rounded-full relative overflow-hidden"
+                style={{
+                  background: `
+                    radial-gradient(circle at 30% 25%, 
+                      #3b82f6 0%, 
+                      #1e3a8a 30%, 
+                      #1e40af 50%,
+                      #172554 80%
+                    )
+                  `,
+                  boxShadow: `
+                    inset -4px -4px 8px rgba(0,0,0,0.5),
+                    inset 2px 2px 4px rgba(96,165,250,0.2),
+                    0 0 12px rgba(59,130,246,0.4)
+                  `,
                 }}
               >
-                {/* Continent dots */}
-                {continentData.map((continent) => {
-                  const subject = mockSubjects.find(s => s.id === continent.id)
-                  if (!subject) return null
-                  
-                  const color = getColorFromScore(subject.marks)
-                  const radAngle = (continent.angle * Math.PI) / 180
-                  const radElevation = (continent.elevation * Math.PI) / 180
-                  
-                  const x = Math.cos(radAngle) * Math.cos(radElevation) * 14
-                  const y = Math.sin(radElevation) * 14
-                  const z = Math.sin(radAngle) * Math.cos(radElevation) * 14
-                  
-                  return (
-                    <div
-                      key={continent.id}
-                      className="absolute w-2 h-2 rounded-full"
-                      style={{
-                        background: color,
-                        boxShadow: `0 0 4px ${color}`,
-                        left: '50%',
-                        top: '50%',
-                        transform: `translate3d(${x}px, ${y}px, ${z}px) translate(-50%, -50%)`,
-                      }}
-                    />
-                  )
-                })}
+                {/* Rotating SVG continents */}
+                <motion.svg
+                  viewBox="0 0 80 80"
+                  className="absolute inset-0 w-full h-full"
+                  style={{
+                    transform: `rotateY(${rotation * 0.3}deg)`,
+                  }}
+                >
+                  {continentSubjects.map(({ key, subjectId }) => {
+                    const subject = mockSubjects.find(s => s.id === subjectId)
+                    const color = subject ? getColorFromScore(subject.marks) : '#22c55e'
+                    const path = miniContinents[key as keyof typeof miniContinents]
+                    
+                    return (
+                      <path
+                        key={key}
+                        d={path}
+                        fill={color}
+                        opacity={0.85}
+                        style={{
+                          filter: `drop-shadow(0 0 2px ${color})`,
+                        }}
+                      />
+                    )
+                  })}
+                </motion.svg>
+
+                {/* Atmosphere glow */}
+                <div
+                  className="absolute -inset-1 rounded-full pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(circle, transparent 60%, rgba(96,165,250,0.2) 100%)',
+                  }}
+                />
+
+                {/* Specular highlight */}
+                <div
+                  className="absolute inset-0 rounded-full pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse at 25% 20%, rgba(255,255,255,0.25) 0%, transparent 50%)',
+                  }}
+                />
               </motion.div>
             </div>
           </motion.button>

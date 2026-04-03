@@ -10,7 +10,7 @@ import { IntroSequence } from '@/components/intro-sequence'
 // Components
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { CommandPalette } from '@/components/dashboard/command-palette'
-import { DeepFocusMode } from '@/components/dashboard/deep-focus-mode'
+import { FocusOrbit } from '@/components/dashboard/focus-orbit'
 import { TaskGravityEngine } from '@/components/dashboard/task-gravity-engine'
 import { IssueTracker } from '@/components/dashboard/issue-tracker'
 import { ResourceShelf } from '@/components/dashboard/resource-shelf'
@@ -301,9 +301,9 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* Deep Focus Mode Overlay */}
+      {/* Focus Orbit Mode Overlay */}
       <AnimatePresence>
-        {isDeepFocusMode && <DeepFocusMode />}
+        {isDeepFocusMode && <FocusOrbit />}
       </AnimatePresence>
 
       {/* Main Cockpit */}
