@@ -13,38 +13,40 @@ interface Particle {
 const Particle: React.FC<{ particle: Particle }> = ({ particle }) => {
   return (
     <motion.div
-      initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+      initial={{ x: 0, y: 0, opacity: 0.6, scale: 1 }}
       animate={{
-        x: Math.cos(particle.angle) * particle.speed * 120,
-        y: Math.sin(particle.angle) * particle.speed * 120,
+        x: Math.cos(particle.angle) * particle.speed * 70,
+        y: Math.sin(particle.angle) * particle.speed * 70,
         opacity: 0,
-        scale: 0,
+        scale: 0.2,
       }}
-      transition={{ duration: 0.8, ease: 'easeOut' }}
-      className="absolute w-1.5 h-1.5 bg-white rounded-full pointer-events-none"
+      transition={{ duration: 1.4, ease: 'easeOut' }}
+      className="absolute w-1.5 h-1.5 rounded-full pointer-events-none"
       style={{
         left: '50%',
         top: '50%',
         marginLeft: '-3px',
         marginTop: '-3px',
+        background: 'rgba(30, 58, 95, 0.6)',
       }}
     />
   )
 }
 
-// Expanding ring effect
+// Expanding ring effect - softer and slower
 const ExpandingRing: React.FC<{ delay: number }> = ({ delay }) => {
   return (
     <motion.div
-      initial={{ scale: 0, opacity: 1 }}
-      animate={{ scale: 5, opacity: 0 }}
-      transition={{ duration: 0.9, delay, ease: 'easeOut' }}
-      className="absolute w-20 h-20 border-2 border-white rounded-full pointer-events-none"
+      initial={{ scale: 0, opacity: 0.4 }}
+      animate={{ scale: 2.5, opacity: 0 }}
+      transition={{ duration: 1.6, delay, ease: 'easeOut' }}
+      className="absolute w-16 h-16 rounded-full pointer-events-none"
       style={{
         left: '50%',
         top: '50%',
-        marginLeft: '-40px',
-        marginTop: '-40px',
+        marginLeft: '-32px',
+        marginTop: '-32px',
+        border: '1px solid rgba(30, 58, 95, 0.4)',
       }}
     />
   )
@@ -69,37 +71,38 @@ const Letter: React.FC<LetterProps> = ({ letter, index, totalLetters, onComplete
   const [particles, setParticles] = useState<Particle[]>([])
   const [fontIndex, setFontIndex] = useState(0)
   const burstTriggeredRef = useRef(false)
-  const letterDelay = index * 0.18
+  // Slower letter delay - increased from 0.18 to 0.35 for softer animation
+  const letterDelay = index * 0.35
 
-  // Font cycling effect (150ms total)
+  // Font cycling effect (300ms total - slower and softer)
   useEffect(() => {
     const cycleStartTime = letterDelay * 1000
     const timeoutId = setTimeout(() => {
       let currentFontIndex = 0
-      const cycleDuration = 50 // 50ms per font
+      const cycleDuration = 100 // 100ms per font (slower)
       
       const cycleInterval = setInterval(() => {
         currentFontIndex = (currentFontIndex + 1) % fontCycles.length
         setFontIndex(currentFontIndex)
       }, cycleDuration)
 
-      // Stop cycling after 150ms
+      // Stop cycling after 300ms (slower)
       setTimeout(() => {
         clearInterval(cycleInterval)
         setFontIndex(0) // Settle on serif
-      }, 150)
+      }, 300)
     }, cycleStartTime)
 
     return () => clearTimeout(timeoutId)
   }, [letterDelay])
 
-  // Particle burst effect
+  // Particle burst effect - softer and slower
   useEffect(() => {
-    const burstDelay = letterDelay + 0.35
+    const burstDelay = letterDelay + 0.6
     const timeoutId = setTimeout(() => {
       if (!burstTriggeredRef.current) {
         burstTriggeredRef.current = true
-        const particleCount = 16
+        const particleCount = 12 // fewer particles for softer effect
         const newParticles: Particle[] = []
         
         for (let i = 0; i < particleCount; i++) {
@@ -107,14 +110,14 @@ const Letter: React.FC<LetterProps> = ({ letter, index, totalLetters, onComplete
           newParticles.push({
             id: i,
             angle,
-            speed: 0.7 + Math.random() * 0.5,
+            speed: 0.4 + Math.random() * 0.3, // slower speed
           })
         }
         setParticles(newParticles)
 
         // Call onComplete when last letter finishes bursting
         if (index === totalLetters - 1 && onComplete) {
-          setTimeout(onComplete, 800)
+          setTimeout(onComplete, 1200) // longer delay for smoother transition
         }
       }
     }, burstDelay * 1000)
@@ -144,11 +147,11 @@ const Letter: React.FC<LetterProps> = ({ letter, index, totalLetters, onComplete
         }}
         transition={{
           delay: letterDelay,
-          duration: 0.6,
+          duration: 1.0,
           type: 'spring',
-          stiffness: 240,
-          damping: 14,
-          mass: 0.8,
+          stiffness: 120,
+          damping: 18,
+          mass: 1.2,
         }}
         // Snap to final position after all letters pop
         onAnimationComplete={() => {
@@ -156,7 +159,10 @@ const Letter: React.FC<LetterProps> = ({ letter, index, totalLetters, onComplete
         }}
       >
         {/* Letter text with font cycling */}
-        <div className={`text-9xl font-bold text-white drop-shadow-2xl ${fontCycles[fontIndex]} transition-all duration-75 font-extrabold tracking-wider`}>
+        <div 
+          className={`text-9xl font-bold drop-shadow-2xl ${fontCycles[fontIndex]} transition-all duration-100 font-extrabold tracking-wider`}
+          style={{ color: '#1e3a5f', textShadow: '0 4px 20px rgba(30, 58, 95, 0.3)' }}
+        >
           {letter}
         </div>
 
@@ -164,17 +170,17 @@ const Letter: React.FC<LetterProps> = ({ letter, index, totalLetters, onComplete
         <motion.div
           initial={{ opacity: 0, filter: 'blur(20px)' }}
           animate={{
-            opacity: [0, 1, 0.5],
-            filter: 'blur(20px)',
+            opacity: [0, 0.6, 0.3],
+            filter: 'blur(25px)',
           }}
           transition={{
             delay: letterDelay,
-            duration: 0.8,
+            duration: 1.2,
           }}
-          className="absolute inset-0 bg-white -z-10 blur-2xl"
+          className="absolute inset-0 -z-10 blur-2xl"
           style={{
-            filter: 'blur(30px)',
-            opacity: 0.4,
+            background: 'rgba(30, 58, 95, 0.3)',
+            filter: 'blur(35px)',
           }}
         />
 
@@ -191,17 +197,17 @@ const Letter: React.FC<LetterProps> = ({ letter, index, totalLetters, onComplete
           <ExpandingRing delay={letterDelay + 0.3} />
         </div>
 
-        {/* Jiggle after burst */}
+        {/* Jiggle after burst - softer and gentler */}
         <motion.div
           initial={{ x: 0, y: 0 }}
           animate={{
-            x: [0, -4, 4, -3, 3, -2, 2, -1, 1, 0],
-            y: [0, 3, -3, 2, -2, 1, -1, 1, -1, 0],
+            x: [0, -2, 2, -1.5, 1.5, -1, 1, 0],
+            y: [0, 1.5, -1.5, 1, -1, 0.5, -0.5, 0],
           }}
           transition={{
-            delay: letterDelay + 0.5,
-            duration: 0.35,
-            times: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1],
+            delay: letterDelay + 0.8,
+            duration: 0.6,
+            times: [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1],
             ease: 'easeInOut',
           }}
           className="absolute inset-0 pointer-events-none"
@@ -271,7 +277,7 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
         <motion.div
           ref={containerRef}
           className="fixed inset-0 flex items-center justify-center overflow-hidden"
-          style={{ background: '#E3F2FD' }}
+          style={{ background: '#C5D8F0' }}
           initial={{ opacity: 1 }}
           exit={{
             scale: 1.2,
@@ -279,20 +285,20 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
             transition: { duration: 0.5, ease: 'easeInOut' },
           }}
         >
-          {/* Animated spotlight background */}
+          {/* Animated spotlight background - subtle blue glow */}
           <motion.div
             className="absolute pointer-events-none"
             style={{
               width: '600px',
               height: '600px',
-              background: 'radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%)',
-              filter: 'blur(60px)',
+              background: 'radial-gradient(circle, rgba(255,255,255,0.25) 0%, rgba(200,220,240,0.1) 50%, transparent 70%)',
+              filter: 'blur(70px)',
             }}
             animate={{
-              opacity: [0.3, 0.5, 0.3],
+              opacity: [0.25, 0.4, 0.25],
             }}
             transition={{
-              duration: 4,
+              duration: 5,
               repeat: Infinity,
               repeatType: 'reverse',
             }}
@@ -319,24 +325,24 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
             </motion.div>
           )}
 
-          {/* Decorative elements - subtle background */}
+          {/* Decorative elements - subtle background with blue tones */}
           <motion.div
             className="absolute pointer-events-none"
             style={{
               width: '400px',
               height: '400px',
-              background: 'radial-gradient(circle, rgba(160, 211, 232, 0.2) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(100, 140, 180, 0.15) 0%, transparent 70%)',
               borderRadius: '50%',
               top: '20%',
               left: '15%',
-              filter: 'blur(40px)',
+              filter: 'blur(50px)',
             }}
             animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.3, 0.6, 0.3],
+              scale: [1, 1.15, 1],
+              opacity: [0.2, 0.4, 0.2],
             }}
             transition={{
-              duration: 5,
+              duration: 6,
               repeat: Infinity,
               repeatType: 'reverse',
             }}
@@ -346,18 +352,18 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
             style={{
               width: '350px',
               height: '350px',
-              background: 'radial-gradient(circle, rgba(192, 230, 240, 0.2) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(80, 120, 170, 0.15) 0%, transparent 70%)',
               borderRadius: '50%',
               bottom: '15%',
               right: '10%',
-              filter: 'blur(40px)',
+              filter: 'blur(50px)',
             }}
             animate={{
-              scale: [1.2, 1, 1.2],
-              opacity: [0.4, 0.2, 0.4],
+              scale: [1.15, 1, 1.15],
+              opacity: [0.3, 0.15, 0.3],
             }}
             transition={{
-              duration: 6,
+              duration: 7,
               repeat: Infinity,
               repeatType: 'reverse',
               delay: 0.5,
@@ -368,16 +374,17 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
         // Final logo state before fade to dashboard
         <motion.div
           className="fixed inset-0 flex items-center justify-center overflow-hidden"
-          style={{ background: '#E3F2FD' }}
+          style={{ background: '#C5D8F0' }}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
-          transition={{ delay: 0.1, duration: 0.4, ease: 'easeOut' }}
+          transition={{ delay: 0.1, duration: 0.6, ease: 'easeOut' }}
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 1 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="text-7xl font-serif font-bold text-white drop-shadow-2xl"
+            transition={{ duration: 0.4 }}
+            className="text-7xl font-serif font-bold drop-shadow-2xl"
+            style={{ color: '#1e3a5f', textShadow: '0 4px 20px rgba(30, 58, 95, 0.3)' }}
           >
             NEXUS-UNI
           </motion.div>

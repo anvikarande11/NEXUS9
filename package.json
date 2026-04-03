@@ -9,6 +9,9 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@react-three/drei": "^9.117.3",
+    "@react-three/fiber": "^8.17.10",
+    "three": "^0.170.0",
     "aria-hidden": "^1.2.4",
     "@hookform/resolvers": "^3.9.1",
     "@vercel/analytics": "1.6.1",

@@ -1,12 +1,15 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Activity, Shield, Zap, AlertTriangle, TrendingUp, Users, BookOpen, AlertCircle } from 'lucide-react'
+import { Activity, Shield, Zap, AlertTriangle, TrendingUp, Users, BookOpen, AlertCircle, FileDown, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDashboardStore } from '@/lib/store'
-import { mockSubjects, type Subject } from '@/lib/mock-data'
+import { mockSubjects, type Subject, mockTasks, mockIssues } from '@/lib/mock-data'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { InteractiveGlobe } from './3d-globe'
+import { useState } from 'react'
 
 function HealthBar({ value, maxValue = 100, color, label }: { 
   value: number; 
@@ -87,6 +90,299 @@ function XPBar({ value, level }: { value: number; level: number }) {
       </div>
     </div>
   )
+}
+
+// PDF Generation Function
+async function generateAcademicProgressPDF() {
+  // Create a new PDF document using jsPDF pattern (browser-compatible)
+  const currentDate = new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  })
+  
+  // Calculate overall statistics
+  const totalSubjects = mockSubjects.length
+  const avgAttendance = Math.round(mockSubjects.reduce((sum, s) => sum + s.attendance, 0) / totalSubjects)
+  const avgMarks = Math.round(mockSubjects.reduce((sum, s) => sum + s.marks, 0) / totalSubjects)
+  const avgConfidence = Math.round(mockSubjects.reduce((sum, s) => sum + s.revisionConfidence, 0) / totalSubjects)
+  const atRiskSubjects = mockSubjects.filter(s => s.riskLevel === 'danger').length
+  const warningSubjects = mockSubjects.filter(s => s.riskLevel === 'warning').length
+  const safeSubjects = mockSubjects.filter(s => s.riskLevel === 'safe').length
+  
+  const pendingTasks = mockTasks.length
+  const criticalTasks = mockTasks.filter(t => t.urgency === 'critical').length
+  const openIssues = mockIssues.filter(i => i.status === 'open' || i.status === 'in-review').length
+  
+  // Build PDF content as HTML for printing
+  const pdfContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Academic Progress Report - NEXUS-UNI</title>
+  <style>
+    @page { margin: 20mm; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      line-height: 1.6; 
+      color: #1a1a2e;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header { 
+      text-align: center; 
+      border-bottom: 3px solid #22c55e; 
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    .header h1 { 
+      color: #0a192f; 
+      margin: 0;
+      font-size: 28px;
+    }
+    .header p { 
+      color: #666; 
+      margin: 5px 0 0 0;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    .summary-card {
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      border: 1px solid #bae6fd;
+    }
+    .summary-card .value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #0369a1;
+    }
+    .summary-card .label {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .section { 
+      margin-bottom: 30px; 
+    }
+    .section h2 { 
+      color: #0a192f; 
+      border-bottom: 2px solid #22c55e;
+      padding-bottom: 8px;
+      font-size: 18px;
+    }
+    .subject-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .subject-table th, .subject-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .subject-table th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: #374151;
+    }
+    .risk-safe { color: #22c55e; font-weight: 600; }
+    .risk-warning { color: #f59e0b; font-weight: 600; }
+    .risk-danger { color: #ef4444; font-weight: 600; }
+    .progress-bar {
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+      width: 100px;
+      display: inline-block;
+      margin-right: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+    .task-list {
+      list-style: none;
+      padding: 0;
+    }
+    .task-list li {
+      padding: 10px;
+      background: #f8fafc;
+      border-left: 3px solid #22c55e;
+      margin-bottom: 8px;
+      border-radius: 0 8px 8px 0;
+    }
+    .task-list li.critical { border-left-color: #ef4444; }
+    .task-list li.high { border-left-color: #f59e0b; }
+    .task-list li.medium { border-left-color: #3b82f6; }
+    .recommendations {
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #fbbf24;
+    }
+    .recommendations h3 {
+      color: #92400e;
+      margin-top: 0;
+    }
+    .recommendations ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .recommendations li {
+      margin-bottom: 8px;
+      color: #78350f;
+    }
+    .footer {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 12px;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>NEXUS-UNI Academic Progress Report</h1>
+    <p>Generated on ${currentDate}</p>
+  </div>
+  
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="value">${avgAttendance}%</div>
+      <div class="label">Avg. Attendance</div>
+    </div>
+    <div class="summary-card">
+      <div class="value">${avgMarks}%</div>
+      <div class="label">Avg. Marks</div>
+    </div>
+    <div class="summary-card">
+      <div class="value">${avgConfidence}%</div>
+      <div class="label">Revision Confidence</div>
+    </div>
+    <div class="summary-card">
+      <div class="value">${pendingTasks}</div>
+      <div class="label">Pending Tasks</div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Subject Performance Overview</h2>
+    <table class="subject-table">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Attendance</th>
+          <th>Marks</th>
+          <th>Confidence</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${mockSubjects.map(subject => `
+          <tr>
+            <td><strong>${subject.name}</strong><br><small style="color: #666">${subject.code}</small></td>
+            <td>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${subject.attendance}%; background: ${subject.attendance >= 75 ? '#22c55e' : subject.attendance >= 50 ? '#f59e0b' : '#ef4444'}"></div>
+              </div>
+              ${subject.attendance}%
+            </td>
+            <td>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${subject.marks}%; background: ${subject.marks >= 70 ? '#22c55e' : subject.marks >= 50 ? '#f59e0b' : '#ef4444'}"></div>
+              </div>
+              ${subject.marks}%
+            </td>
+            <td>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${subject.revisionConfidence}%; background: #8b5cf6"></div>
+              </div>
+              ${subject.revisionConfidence}%
+            </td>
+            <td class="risk-${subject.riskLevel}">${subject.riskLevel.toUpperCase()}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  </div>
+  
+  <div class="section">
+    <h2>Pending Assignments</h2>
+    <ul class="task-list">
+      ${mockTasks.slice(0, 5).map(task => `
+        <li class="${task.urgency}">
+          <strong>${task.title}</strong><br>
+          <small>Subject: ${task.subject} | Due: ${new Date(task.dueDate).toLocaleDateString()} | Progress: ${task.progress}% | Weight: ${task.gradeWeight}%</small>
+        </li>
+      `).join('')}
+    </ul>
+  </div>
+  
+  <div class="section">
+    <h2>Risk Analysis</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+      <div style="background: #dcfce7; padding: 15px; border-radius: 8px; text-align: center;">
+        <div style="font-size: 24px; font-weight: bold; color: #22c55e;">${safeSubjects}</div>
+        <div style="color: #166534;">Safe Subjects</div>
+      </div>
+      <div style="background: #fef3c7; padding: 15px; border-radius: 8px; text-align: center;">
+        <div style="font-size: 24px; font-weight: bold; color: #f59e0b;">${warningSubjects}</div>
+        <div style="color: #92400e;">Warning Subjects</div>
+      </div>
+      <div style="background: #fee2e2; padding: 15px; border-radius: 8px; text-align: center;">
+        <div style="font-size: 24px; font-weight: bold; color: #ef4444;">${atRiskSubjects}</div>
+        <div style="color: #991b1b;">At Risk Subjects</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="recommendations">
+      <h3>AI Recommendations</h3>
+      <ul>
+        ${atRiskSubjects > 0 ? '<li><strong>Urgent:</strong> Focus on subjects marked as "DANGER" - prioritize OS and low-performing subjects</li>' : ''}
+        ${avgAttendance < 80 ? '<li>Improve attendance to at least 80% across all subjects for better academic standing</li>' : ''}
+        ${criticalTasks > 0 ? `<li>Complete ${criticalTasks} critical task(s) immediately to avoid grade penalties</li>` : ''}
+        ${openIssues > 0 ? `<li>Address ${openIssues} open professor feedback issue(s) to improve your standing</li>` : ''}
+        ${avgConfidence < 60 ? '<li>Increase revision time - aim for at least 60% confidence across all subjects</li>' : ''}
+        <li>Continue using the Class Path feature to track mastery progress</li>
+        <li>Schedule regular study sessions using the Focus Mode for better retention</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <p>This report was automatically generated by NEXUS-UNI Academic Dashboard</p>
+    <p>For questions or concerns, please contact your academic advisor</p>
+  </div>
+</body>
+</html>
+  `
+  
+  // Open print dialog with the PDF content
+  const printWindow = window.open('', '_blank')
+  if (printWindow) {
+    printWindow.document.write(pdfContent)
+    printWindow.document.close()
+    printWindow.focus()
+    
+    // Wait for content to load then print
+    setTimeout(() => {
+      printWindow.print()
+    }, 500)
+  }
+  
+  return true
 }
 
 function SubjectCard({ subject }: { subject: Subject }) {
@@ -225,9 +521,19 @@ function SubjectCard({ subject }: { subject: Subject }) {
 export function SubjectHealth() {
   const dangerCount = mockSubjects.filter(s => s.riskLevel === 'danger').length
   const warningCount = mockSubjects.filter(s => s.riskLevel === 'warning').length
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+  const handleGeneratePDF = async () => {
+    setIsGeneratingPDF(true)
+    try {
+      await generateAcademicProgressPDF()
+    } finally {
+      setIsGeneratingPDF(false)
+    }
+  }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -236,10 +542,10 @@ export function SubjectHealth() {
             Subject Health
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Gamified academic status tracking
+            Gamified academic status tracking with Visual Grade Map
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {dangerCount > 0 && (
             <Badge variant="outline" className="text-xs text-destructive border-destructive/30">
               {dangerCount} At Risk
@@ -250,7 +556,31 @@ export function SubjectHealth() {
               {warningCount} Warning
             </Badge>
           )}
+          <Button
+            onClick={handleGeneratePDF}
+            disabled={isGeneratingPDF}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            {isGeneratingPDF ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileDown className="w-4 h-4" />
+                Export Progress Report
+              </>
+            )}
+          </Button>
         </div>
+      </div>
+
+      {/* Interactive 3D Globe */}
+      <div className="mb-6">
+        <InteractiveGlobe subjects={mockSubjects} />
       </div>
 
       {/* Subject Grid */}

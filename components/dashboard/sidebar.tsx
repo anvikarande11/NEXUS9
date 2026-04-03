@@ -22,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { MiniGlobe } from './mini-globe'
 
 const navItems: { icon: typeof LayoutDashboard; label: string; view: ViewType; shortcut: string }[] = [
   { icon: LayoutDashboard, label: 'Dashboard', view: 'dashboard', shortcut: '1' },
@@ -49,6 +50,11 @@ export function Sidebar() {
         <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center">
           <span className="text-primary font-bold text-lg">N</span>
         </div>
+      </div>
+
+      {/* Mini Globe - Visual Grade Map */}
+      <div className="py-3 px-2 border-b border-sidebar-border">
+        <MiniGlobe />
       </div>
 
       {/* Navigation */}
