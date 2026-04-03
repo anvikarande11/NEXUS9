@@ -24,6 +24,30 @@ interface FocusSession {
   completed: boolean
 }
 
+// Fixed star positions to avoid hydration mismatch
+const focusStarField = [
+  { left: 2, top: 5, size: 1, delay: 0 }, { left: 8, top: 18, size: 1.5, delay: 0.3 },
+  { left: 4, top: 35, size: 1, delay: 0.7 }, { left: 12, top: 52, size: 2, delay: 0.1 },
+  { left: 6, top: 70, size: 1, delay: 0.9 }, { left: 15, top: 88, size: 1, delay: 0.4 },
+  { left: 18, top: 12, size: 1.5, delay: 1.1 }, { left: 22, top: 28, size: 1, delay: 0.2 },
+  { left: 25, top: 45, size: 1, delay: 0.6 }, { left: 20, top: 62, size: 1.5, delay: 0.8 },
+  { left: 28, top: 78, size: 2, delay: 0.5 }, { left: 32, top: 95, size: 1, delay: 1.0 },
+  { left: 35, top: 8, size: 1, delay: 0.3 }, { left: 38, top: 22, size: 1, delay: 0.7 },
+  { left: 42, top: 38, size: 1.5, delay: 0.1 }, { left: 45, top: 55, size: 1, delay: 0.9 },
+  { left: 48, top: 72, size: 2, delay: 0.4 }, { left: 52, top: 85, size: 1, delay: 0.6 },
+  { left: 55, top: 15, size: 1, delay: 0.2 }, { left: 58, top: 32, size: 1.5, delay: 0.8 },
+  { left: 62, top: 48, size: 1, delay: 1.2 }, { left: 65, top: 65, size: 1, delay: 0.5 },
+  { left: 68, top: 82, size: 1.5, delay: 0.3 }, { left: 72, top: 5, size: 2, delay: 0.7 },
+  { left: 75, top: 20, size: 1, delay: 0.1 }, { left: 78, top: 42, size: 1, delay: 0.9 },
+  { left: 82, top: 58, size: 1.5, delay: 0.4 }, { left: 85, top: 75, size: 1, delay: 0.6 },
+  { left: 88, top: 92, size: 1, delay: 1.0 }, { left: 92, top: 10, size: 2, delay: 0.2 },
+  { left: 95, top: 28, size: 1, delay: 0.8 }, { left: 98, top: 45, size: 1.5, delay: 0.5 },
+  { left: 3, top: 82, size: 1, delay: 0.3 }, { left: 10, top: 95, size: 1, delay: 0.7 },
+  { left: 30, top: 3, size: 1.5, delay: 0.1 }, { left: 50, top: 2, size: 1, delay: 0.9 },
+  { left: 70, top: 98, size: 2, delay: 0.4 }, { left: 90, top: 60, size: 1, delay: 0.6 },
+  { left: 14, top: 40, size: 1.5, delay: 1.1 }, { left: 60, top: 90, size: 1, delay: 0.2 },
+]
+
 export function FocusOrbit() {
   const { toggleDeepFocusMode } = useDashboardStore()
   const [isRunning, setIsRunning] = useState(false)
@@ -110,32 +134,29 @@ export function FocusOrbit() {
         background: 'radial-gradient(ellipse at center, #0a192f 0%, #020617 50%, #000 100%)'
       }}
     >
-      {/* Star field */}
+      {/* Star field - using fixed positions */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 150 }).map((_, i) => {
-          const size = Math.random() > 0.9 ? 2 : Math.random() > 0.7 ? 1.5 : 1
-          return (
-            <motion.div
-              key={i}
-              className="absolute rounded-full bg-white"
-              style={{
-                width: size,
-                height: size,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                opacity: 0.2 + Math.random() * 0.6,
-              }}
-              animate={{
-                opacity: [0.2, 0.8, 0.2],
-              }}
-              transition={{
-                duration: 2 + Math.random() * 4,
-                repeat: Infinity,
-                delay: Math.random() * 3,
-              }}
-            />
-          )
-        })}
+        {focusStarField.map((star, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-white"
+            style={{
+              width: star.size,
+              height: star.size,
+              left: `${star.left}%`,
+              top: `${star.top}%`,
+              opacity: 0.4,
+            }}
+            animate={{
+              opacity: [0.2, 0.8, 0.2],
+            }}
+            transition={{
+              duration: 3 + star.delay * 2,
+              repeat: Infinity,
+              delay: star.delay,
+            }}
+          />
+        ))}
       </div>
 
       {/* Header */}

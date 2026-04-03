@@ -44,6 +44,30 @@ interface HoveredContinent {
   key: string
 }
 
+// Fixed star positions to avoid hydration mismatch
+const starField = [
+  { left: 5, top: 10, size: 1, delay: 0 }, { left: 12, top: 25, size: 1.5, delay: 0.5 },
+  { left: 8, top: 45, size: 1, delay: 1 }, { left: 3, top: 60, size: 2, delay: 0.2 },
+  { left: 15, top: 75, size: 1, delay: 0.8 }, { left: 22, top: 8, size: 1, delay: 0.3 },
+  { left: 28, top: 35, size: 1.5, delay: 1.2 }, { left: 18, top: 55, size: 1, delay: 0.6 },
+  { left: 25, top: 85, size: 1, delay: 0.1 }, { left: 32, top: 15, size: 1, delay: 0.9 },
+  { left: 38, top: 42, size: 2, delay: 0.4 }, { left: 35, top: 68, size: 1, delay: 1.1 },
+  { left: 42, top: 5, size: 1.5, delay: 0.7 }, { left: 48, top: 28, size: 1, delay: 0.2 },
+  { left: 45, top: 52, size: 1, delay: 1.4 }, { left: 52, top: 78, size: 1.5, delay: 0.5 },
+  { left: 55, top: 12, size: 1, delay: 0.8 }, { left: 58, top: 38, size: 2, delay: 0.1 },
+  { left: 62, top: 62, size: 1, delay: 1.3 }, { left: 65, top: 88, size: 1, delay: 0.6 },
+  { left: 68, top: 20, size: 1.5, delay: 0.3 }, { left: 72, top: 45, size: 1, delay: 0.9 },
+  { left: 75, top: 70, size: 1, delay: 0.4 }, { left: 78, top: 8, size: 2, delay: 1.0 },
+  { left: 82, top: 32, size: 1, delay: 0.2 }, { left: 85, top: 58, size: 1.5, delay: 0.7 },
+  { left: 88, top: 82, size: 1, delay: 1.5 }, { left: 92, top: 18, size: 1, delay: 0.5 },
+  { left: 95, top: 48, size: 1, delay: 0.1 }, { left: 98, top: 72, size: 1.5, delay: 0.8 },
+  { left: 7, top: 92, size: 1, delay: 0.3 }, { left: 17, top: 3, size: 2, delay: 1.2 },
+  { left: 27, top: 22, size: 1, delay: 0.6 }, { left: 37, top: 88, size: 1.5, delay: 0.9 },
+  { left: 47, top: 65, size: 1, delay: 0.4 }, { left: 57, top: 95, size: 1, delay: 1.1 },
+  { left: 67, top: 52, size: 2, delay: 0.2 }, { left: 77, top: 92, size: 1, delay: 0.7 },
+  { left: 87, top: 42, size: 1.5, delay: 1.4 }, { left: 97, top: 28, size: 1, delay: 0.5 },
+]
+
 export function InteractiveGlobe({ subjects }: GlobeProps) {
   const [isRotating, setIsRotating] = useState(true)
   const [hoveredContinent, setHoveredContinent] = useState<HoveredContinent | null>(null)
@@ -84,33 +108,30 @@ export function InteractiveGlobe({ subjects }: GlobeProps) {
         background: 'radial-gradient(ellipse at 30% 20%, #0f172a 0%, #020617 50%, #000 100%)'
       }}
     >
-      {/* Starfield background */}
+      {/* Starfield background - using fixed positions */}
       <div className="absolute inset-0 overflow-hidden">
-        {Array.from({ length: 120 }).map((_, i) => {
-          const size = Math.random() > 0.9 ? 2 : Math.random() > 0.7 ? 1.5 : 1
-          return (
-            <motion.div
-              key={i}
-              className="absolute rounded-full bg-white"
-              style={{
-                width: size,
-                height: size,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                opacity: 0.3 + Math.random() * 0.7,
-              }}
-              animate={{
-                opacity: [0.3, 0.8, 0.3],
-                scale: [1, 1.2, 1],
-              }}
-              transition={{
-                duration: 2 + Math.random() * 3,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
-          )
-        })}
+        {starField.map((star, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-white"
+            style={{
+              width: star.size,
+              height: star.size,
+              left: `${star.left}%`,
+              top: `${star.top}%`,
+              opacity: 0.5,
+            }}
+            animate={{
+              opacity: [0.3, 0.8, 0.3],
+              scale: [1, 1.2, 1],
+            }}
+            transition={{
+              duration: 3 + star.delay,
+              repeat: Infinity,
+              delay: star.delay,
+            }}
+          />
+        ))}
       </div>
 
       {/* Nebula effect */}

@@ -37,6 +37,18 @@ function getColorFromScore(score: number): string {
   return '#22c55e'
 }
 
+// Fixed star positions to avoid hydration mismatch
+const starPositions = [
+  { left: '15%', top: '20%' },
+  { left: '75%', top: '15%' },
+  { left: '85%', top: '45%' },
+  { left: '25%', top: '70%' },
+  { left: '60%', top: '80%' },
+  { left: '40%', top: '25%' },
+  { left: '70%', top: '65%' },
+  { left: '20%', top: '45%' },
+]
+
 export function MiniGlobe() {
   const { setCurrentView } = useDashboardStore()
   const [rotation, setRotation] = useState(0)
@@ -58,15 +70,15 @@ export function MiniGlobe() {
             onClick={() => setCurrentView('subject-health')}
             className="w-12 h-12 mx-auto rounded-xl overflow-hidden border border-blue-500/30 bg-gradient-to-b from-slate-900 to-slate-950 hover:border-blue-400/50 transition-all cursor-pointer relative"
           >
-            {/* Stars */}
+            {/* Stars - using fixed positions to avoid hydration mismatch */}
             <div className="absolute inset-0">
-              {Array.from({ length: 8 }).map((_, i) => (
+              {starPositions.map((pos, i) => (
                 <div
                   key={i}
                   className="absolute w-0.5 h-0.5 bg-white/40 rounded-full"
                   style={{
-                    left: `${10 + Math.random() * 80}%`,
-                    top: `${10 + Math.random() * 80}%`,
+                    left: pos.left,
+                    top: pos.top,
                   }}
                 />
               ))}
