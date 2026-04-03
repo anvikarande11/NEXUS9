@@ -180,9 +180,14 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    cursor: url('/images/cursor.png'), auto;
   }
   body {
     @apply bg-background text-foreground;
+    cursor: url('/images/cursor.png'), auto;
+  }
+  a, button, [role="button"], input[type="submit"], input[type="button"] {
+    cursor: url('/images/cursor.png'), pointer;
   }
 }
 

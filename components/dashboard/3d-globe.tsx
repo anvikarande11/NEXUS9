@@ -1,101 +1,122 @@
 'use client'
 
-// CSS-based Interactive Globe with Realistic Earth
-import React, { useState, useEffect } from 'react'
+// Realistic 3D Earth Globe Component
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Subject } from '@/lib/mock-data'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useDashboardStore } from '@/lib/store'
+import Image from 'next/image'
 
-// Realistic continent SVG paths (simplified but recognizable)
-const continents = {
-  northAmerica: `M 45,18 C 48,16 52,15 55,16 L 58,18 C 60,20 62,22 60,25 L 58,28 C 56,30 54,32 52,34 L 48,36 C 45,37 42,36 40,34 L 38,30 C 36,26 38,22 42,20 Z`,
-  southAmerica: `M 52,40 C 54,38 56,39 57,42 L 58,48 C 58,52 56,56 54,58 L 52,60 C 50,61 48,60 47,58 L 46,52 C 46,46 48,42 52,40 Z`,
-  europe: `M 58,20 C 60,18 63,18 65,20 L 67,22 C 68,24 68,26 66,28 L 63,29 C 61,29 59,28 58,26 L 57,23 C 57,21 57,20 58,20 Z`,
-  africa: `M 58,30 C 62,28 66,30 68,34 L 70,40 C 70,46 68,52 64,54 L 60,55 C 56,54 54,50 54,44 L 55,36 C 56,32 56,30 58,30 Z`,
-  asia: `M 68,16 C 74,14 80,16 85,20 L 88,26 C 90,32 88,38 84,42 L 78,44 C 72,44 68,40 66,34 L 65,26 C 66,20 66,17 68,16 Z`,
-  oceania: `M 82,48 C 86,46 90,48 92,52 L 92,56 C 90,58 86,58 84,56 L 82,52 C 82,50 82,48 82,48 Z M 78,52 C 80,50 82,52 82,54 L 80,56 C 78,56 76,54 78,52 Z`,
-}
-
-// Continent mapping to subjects
-const continentMapping = [
-  { key: 'northAmerica', name: 'Data Structures', subjectId: '2', labelX: 35, labelY: 25 },
-  { key: 'southAmerica', name: 'Mathematics', subjectId: '6', labelX: 42, labelY: 52 },
-  { key: 'europe', name: 'DBMS', subjectId: '1', labelX: 55, labelY: 22 },
-  { key: 'africa', name: 'Machine Learning', subjectId: '5', labelX: 55, labelY: 42 },
-  { key: 'asia', name: 'Operating Systems', subjectId: '3', labelX: 75, labelY: 28 },
-  { key: 'oceania', name: 'Computer Networks', subjectId: '4', labelX: 82, labelY: 52 },
+// Continent data points with realistic latitude/longitude positioning
+const dataPoints = [
+  { id: '2', name: 'Data Structures', region: 'North America', lat: 40, lng: -100, angle: -15 },
+  { id: '6', name: 'Mathematics', region: 'South America', lat: -15, lng: -60, angle: 25 },
+  { id: '1', name: 'DBMS', region: 'Europe', lat: 50, lng: 10, angle: 45 },
+  { id: '5', name: 'Machine Learning', region: 'Africa', lat: 5, lng: 20, angle: 55 },
+  { id: '3', name: 'Operating Systems', region: 'Asia', lat: 35, lng: 100, angle: 100 },
+  { id: '4', name: 'Computer Networks', region: 'Oceania', lat: -25, lng: 135, angle: 130 },
 ]
 
-function getColorFromScore(score: number): { fill: string; glow: string } {
-  if (score < 35) return { fill: '#ef4444', glow: 'rgba(239, 68, 68, 0.6)' }
-  if (score < 75) return { fill: '#f59e0b', glow: 'rgba(245, 158, 11, 0.5)' }
-  return { fill: '#22c55e', glow: 'rgba(34, 197, 94, 0.5)' }
+function getColorFromScore(score: number): { fill: string; glow: string; status: string } {
+  if (score < 35) return { fill: '#ef4444', glow: 'rgba(239, 68, 68, 0.8)', status: 'At Risk' }
+  if (score < 75) return { fill: '#f59e0b', glow: 'rgba(245, 158, 11, 0.7)', status: 'Needs Work' }
+  return { fill: '#22c55e', glow: 'rgba(34, 197, 94, 0.7)', status: 'Excellent' }
 }
 
 interface GlobeProps {
   subjects: Subject[]
 }
 
-interface HoveredContinent {
+interface HoveredPoint {
   subject: Subject
   name: string
-  key: string
+  region: string
+  x: number
+  y: number
 }
 
-// Fixed star positions to avoid hydration mismatch
+// Fixed star positions
 const starField = [
-  { left: 5, top: 10, size: 1, delay: 0 }, { left: 12, top: 25, size: 1.5, delay: 0.5 },
-  { left: 8, top: 45, size: 1, delay: 1 }, { left: 3, top: 60, size: 2, delay: 0.2 },
-  { left: 15, top: 75, size: 1, delay: 0.8 }, { left: 22, top: 8, size: 1, delay: 0.3 },
-  { left: 28, top: 35, size: 1.5, delay: 1.2 }, { left: 18, top: 55, size: 1, delay: 0.6 },
-  { left: 25, top: 85, size: 1, delay: 0.1 }, { left: 32, top: 15, size: 1, delay: 0.9 },
-  { left: 38, top: 42, size: 2, delay: 0.4 }, { left: 35, top: 68, size: 1, delay: 1.1 },
-  { left: 42, top: 5, size: 1.5, delay: 0.7 }, { left: 48, top: 28, size: 1, delay: 0.2 },
-  { left: 45, top: 52, size: 1, delay: 1.4 }, { left: 52, top: 78, size: 1.5, delay: 0.5 },
-  { left: 55, top: 12, size: 1, delay: 0.8 }, { left: 58, top: 38, size: 2, delay: 0.1 },
-  { left: 62, top: 62, size: 1, delay: 1.3 }, { left: 65, top: 88, size: 1, delay: 0.6 },
-  { left: 68, top: 20, size: 1.5, delay: 0.3 }, { left: 72, top: 45, size: 1, delay: 0.9 },
-  { left: 75, top: 70, size: 1, delay: 0.4 }, { left: 78, top: 8, size: 2, delay: 1.0 },
-  { left: 82, top: 32, size: 1, delay: 0.2 }, { left: 85, top: 58, size: 1.5, delay: 0.7 },
-  { left: 88, top: 82, size: 1, delay: 1.5 }, { left: 92, top: 18, size: 1, delay: 0.5 },
-  { left: 95, top: 48, size: 1, delay: 0.1 }, { left: 98, top: 72, size: 1.5, delay: 0.8 },
-  { left: 7, top: 92, size: 1, delay: 0.3 }, { left: 17, top: 3, size: 2, delay: 1.2 },
-  { left: 27, top: 22, size: 1, delay: 0.6 }, { left: 37, top: 88, size: 1.5, delay: 0.9 },
-  { left: 47, top: 65, size: 1, delay: 0.4 }, { left: 57, top: 95, size: 1, delay: 1.1 },
-  { left: 67, top: 52, size: 2, delay: 0.2 }, { left: 77, top: 92, size: 1, delay: 0.7 },
-  { left: 87, top: 42, size: 1.5, delay: 1.4 }, { left: 97, top: 28, size: 1, delay: 0.5 },
+  { left: 2, top: 5, size: 1 }, { left: 8, top: 15, size: 1.5 },
+  { left: 5, top: 35, size: 1 }, { left: 12, top: 55, size: 2 },
+  { left: 3, top: 75, size: 1 }, { left: 18, top: 10, size: 1 },
+  { left: 25, top: 30, size: 1.5 }, { left: 15, top: 50, size: 1 },
+  { left: 22, top: 70, size: 1 }, { left: 30, top: 8, size: 1 },
+  { left: 35, top: 40, size: 2 }, { left: 28, top: 60, size: 1 },
+  { left: 40, top: 20, size: 1.5 }, { left: 45, top: 45, size: 1 },
+  { left: 38, top: 80, size: 1 }, { left: 52, top: 12, size: 1.5 },
+  { left: 55, top: 35, size: 1 }, { left: 48, top: 65, size: 2 },
+  { left: 60, top: 25, size: 1 }, { left: 65, top: 55, size: 1 },
+  { left: 58, top: 85, size: 1.5 }, { left: 72, top: 15, size: 1 },
+  { left: 75, top: 45, size: 1 }, { left: 68, top: 72, size: 2 },
+  { left: 80, top: 8, size: 1.5 }, { left: 85, top: 38, size: 1 },
+  { left: 78, top: 60, size: 1 }, { left: 90, top: 20, size: 1 },
+  { left: 92, top: 50, size: 1.5 }, { left: 88, top: 78, size: 1 },
+  { left: 95, top: 30, size: 2 }, { left: 98, top: 65, size: 1 },
 ]
 
 export function InteractiveGlobe({ subjects }: GlobeProps) {
   const [isRotating, setIsRotating] = useState(true)
-  const [hoveredContinent, setHoveredContinent] = useState<HoveredContinent | null>(null)
+  const [hoveredPoint, setHoveredPoint] = useState<HoveredPoint | null>(null)
   const [rotation, setRotation] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, rotation: 0 })
+  const globeRef = useRef<HTMLDivElement>(null)
   const { setCurrentView } = useDashboardStore()
 
   // Smooth rotation effect
   useEffect(() => {
-    if (!isRotating) return
+    if (!isRotating || isDragging) return
     const interval = setInterval(() => {
-      setRotation(prev => (prev + 0.3) % 360)
+      setRotation(prev => (prev + 0.2) % 360)
     }, 50)
     return () => clearInterval(interval)
-  }, [isRotating])
+  }, [isRotating, isDragging])
 
-  const handleContinentHover = (continent: typeof continentMapping[0], subject: Subject) => {
-    setHoveredContinent({ subject, name: continent.name, key: continent.key })
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true)
+    setDragStart({ x: e.clientX, rotation })
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return
+    const delta = e.clientX - dragStart.x
+    setRotation(dragStart.rotation + delta * 0.5)
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  const handlePointHover = (point: typeof dataPoints[0], subject: Subject, x: number, y: number) => {
+    setHoveredPoint({ subject, name: point.name, region: point.region, x, y })
     setIsRotating(false)
   }
 
-  const handleContinentLeave = () => {
-    setHoveredContinent(null)
+  const handlePointLeave = () => {
+    setHoveredPoint(null)
     setIsRotating(true)
   }
 
   const handleJumpToMastery = () => {
     setCurrentView('class-path')
-    setHoveredContinent(null)
+    setHoveredPoint(null)
+  }
+
+  // Calculate point position on sphere
+  const getPointPosition = (point: typeof dataPoints[0]) => {
+    const effectiveAngle = (rotation + point.angle) % 360
+    const radians = (effectiveAngle * Math.PI) / 180
+    const latRadians = (point.lat * Math.PI) / 180
+    
+    // Calculate 3D position on sphere
+    const x = Math.sin(radians) * Math.cos(latRadians) * 140 + 160
+    const y = -Math.sin(latRadians) * 140 + 160
+    const z = Math.cos(radians) * Math.cos(latRadians)
+    
+    return { x, y, z, visible: z > -0.2 }
   }
 
   return (
@@ -105,10 +126,13 @@ export function InteractiveGlobe({ subjects }: GlobeProps) {
       transition={{ type: 'spring', bounce: 0.3, duration: 0.6 }}
       className="relative w-full h-[520px] rounded-2xl overflow-hidden border border-primary/20"
       style={{ 
-        background: 'radial-gradient(ellipse at 30% 20%, #0f172a 0%, #020617 50%, #000 100%)'
+        background: 'radial-gradient(ellipse at 30% 20%, #0c1929 0%, #030712 60%, #000 100%)'
       }}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     >
-      {/* Starfield background - using fixed positions */}
+      {/* Starfield background */}
       <div className="absolute inset-0 overflow-hidden">
         {starField.map((star, i) => (
           <motion.div
@@ -119,16 +143,14 @@ export function InteractiveGlobe({ subjects }: GlobeProps) {
               height: star.size,
               left: `${star.left}%`,
               top: `${star.top}%`,
-              opacity: 0.5,
             }}
             animate={{
               opacity: [0.3, 0.8, 0.3],
-              scale: [1, 1.2, 1],
             }}
             transition={{
-              duration: 3 + star.delay,
+              duration: 2 + (i % 3),
               repeat: Infinity,
-              delay: star.delay,
+              delay: i * 0.1,
             }}
           />
         ))}
@@ -136,267 +158,218 @@ export function InteractiveGlobe({ subjects }: GlobeProps) {
 
       {/* Nebula effect */}
       <div 
-        className="absolute inset-0 opacity-30"
+        className="absolute inset-0 opacity-20 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse at 70% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 20% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 40%)'
+          background: 'radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.2) 0%, transparent 50%), radial-gradient(ellipse at 10% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 40%)'
         }}
       />
 
       {/* Globe container */}
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div 
+        ref={globeRef}
+        className="absolute inset-0 flex items-center justify-center"
+        onMouseDown={handleMouseDown}
+        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+      >
         <div 
-          className="relative w-80 h-80 md:w-96 md:h-96"
+          className="relative w-80 h-80 md:w-[340px] md:h-[340px]"
           style={{ perspective: '1200px' }}
         >
-          {/* Earth sphere */}
+          {/* Earth sphere with real image */}
           <motion.div
-            className="absolute inset-0 rounded-full"
+            className="absolute inset-0 rounded-full overflow-hidden"
             style={{
               transformStyle: 'preserve-3d',
               transform: `rotateY(${rotation}deg) rotateX(-15deg)`,
             }}
           >
-            {/* Ocean base with realistic gradient */}
-            <div
-              className="absolute inset-0 rounded-full"
+            {/* Earth image - main globe */}
+            <div 
+              className="absolute inset-0 rounded-full overflow-hidden"
               style={{
-                background: `
-                  radial-gradient(circle at 35% 25%, 
-                    #1e40af 0%, 
-                    #1e3a8a 20%, 
-                    #172554 40%, 
-                    #0f172a 70%,
-                    #020617 100%
-                  )
-                `,
                 boxShadow: `
-                  inset -40px -40px 80px rgba(0,0,0,0.6),
-                  inset 20px 20px 40px rgba(96,165,250,0.1),
-                  0 0 100px rgba(59,130,246,0.4),
-                  0 0 200px rgba(59,130,246,0.2)
+                  inset -30px -30px 60px rgba(0,0,0,0.7),
+                  inset 20px 20px 50px rgba(100,180,255,0.1),
+                  0 0 80px rgba(59,130,246,0.5),
+                  0 0 160px rgba(59,130,246,0.25)
                 `,
-              }}
-            />
-
-            {/* Atmosphere glow */}
-            <div
-              className="absolute -inset-4 rounded-full pointer-events-none"
-              style={{
-                background: 'radial-gradient(circle, transparent 65%, rgba(96,165,250,0.15) 80%, rgba(59,130,246,0.08) 100%)',
-              }}
-            />
-
-            {/* Globe SVG with continents */}
-            <svg
-              viewBox="0 0 100 100"
-              className="absolute inset-0 w-full h-full"
-              style={{ 
-                filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.1))',
               }}
             >
-              <defs>
-                {/* Continent gradients */}
-                {continentMapping.map(continent => {
-                  const subject = subjects.find(s => s.id === continent.subjectId)
-                  const colors = subject ? getColorFromScore(subject.marks) : { fill: '#4ade80', glow: 'rgba(74, 222, 128, 0.5)' }
-                  return (
-                    <linearGradient key={continent.key} id={`grad-${continent.key}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor={colors.fill} stopOpacity="0.9" />
-                      <stop offset="100%" stopColor={colors.fill} stopOpacity="0.5" />
-                    </linearGradient>
-                  )
-                })}
-                
-                {/* Glow filter */}
-                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="1" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
+              <Image
+                src="/images/earth.png"
+                alt="Earth"
+                fill
+                className="object-cover rounded-full"
+                style={{
+                  transform: `rotateY(${-rotation * 0.5}deg)`,
+                }}
+                priority
+              />
+              
+              {/* Atmosphere overlay */}
+              <div 
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.15) 0%, transparent 50%)',
+                }}
+              />
+            </div>
 
-                {/* Grid pattern */}
-                <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(96,165,250,0.08)" strokeWidth="0.3" />
-                </pattern>
-              </defs>
-
-              {/* Ocean grid overlay */}
-              <circle cx="50" cy="50" r="49" fill="url(#grid)" opacity="0.5" />
-
-              {/* Latitude lines */}
-              {[20, 35, 50, 65, 80].map(lat => (
-                <ellipse
-                  key={`lat-${lat}`}
-                  cx="50"
-                  cy="50"
-                  rx={lat * 0.49}
-                  ry={lat * 0.49 * Math.cos((lat - 50) * 0.02)}
-                  fill="none"
-                  stroke="rgba(96,165,250,0.1)"
-                  strokeWidth="0.3"
-                  strokeDasharray="2,2"
-                />
-              ))}
-
-              {/* Longitude lines */}
-              {[0, 30, 60, 90, 120, 150].map(lon => (
-                <ellipse
-                  key={`lon-${lon}`}
-                  cx="50"
-                  cy="50"
-                  rx={Math.abs(Math.sin(lon * Math.PI / 180)) * 49}
-                  ry="49"
-                  fill="none"
-                  stroke="rgba(96,165,250,0.08)"
-                  strokeWidth="0.3"
-                  transform={`rotate(${lon} 50 50)`}
-                />
-              ))}
-
-              {/* Continents */}
-              {continentMapping.map(continent => {
-                const subject = subjects.find(s => s.id === continent.subjectId)
-                const colors = subject ? getColorFromScore(subject.marks) : { fill: '#4ade80', glow: 'rgba(74, 222, 128, 0.5)' }
-                const isHovered = hoveredContinent?.key === continent.key
-                const path = continents[continent.key as keyof typeof continents]
-
-                return (
-                  <g key={continent.key}>
-                    {/* Continent shadow */}
-                    <path
-                      d={path}
-                      fill="rgba(0,0,0,0.3)"
-                      transform="translate(1, 1)"
-                    />
-                    
-                    {/* Continent shape */}
-                    <motion.path
-                      d={path}
-                      fill={`url(#grad-${continent.key})`}
-                      stroke={colors.fill}
-                      strokeWidth={isHovered ? 1.5 : 0.5}
-                      filter="url(#glow)"
-                      className="cursor-pointer transition-all duration-200"
-                      style={{
-                        filter: isHovered ? `drop-shadow(0 0 8px ${colors.glow})` : undefined,
-                      }}
-                      animate={{
-                        scale: isHovered ? 1.02 : 1,
-                      }}
-                      onMouseEnter={() => subject && handleContinentHover(continent, subject)}
-                      onMouseLeave={handleContinentLeave}
-                    />
-
-                    {/* Pulsing indicator for danger subjects */}
-                    {subject && subject.marks < 35 && (
-                      <motion.circle
-                        cx={continent.labelX}
-                        cy={continent.labelY}
-                        r="3"
-                        fill="none"
-                        stroke="#ef4444"
-                        strokeWidth="0.5"
-                        animate={{
-                          r: [3, 6, 3],
-                          opacity: [0.8, 0, 0.8],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                        }}
-                      />
-                    )}
-
-                    {/* Data point marker */}
-                    <circle
-                      cx={continent.labelX}
-                      cy={continent.labelY}
-                      r="1.5"
-                      fill={colors.fill}
-                      className="pointer-events-none"
-                    />
-                  </g>
-                )
-              })}
-
-              {/* Cloud wisps */}
-              <ellipse cx="30" cy="35" rx="8" ry="2" fill="rgba(255,255,255,0.05)" />
-              <ellipse cx="70" cy="25" rx="6" ry="1.5" fill="rgba(255,255,255,0.04)" />
-              <ellipse cx="55" cy="60" rx="10" ry="2" fill="rgba(255,255,255,0.03)" />
-            </svg>
-
-            {/* Specular highlight */}
+            {/* Outer atmosphere glow */}
             <div
-              className="absolute inset-0 rounded-full pointer-events-none"
+              className="absolute -inset-6 rounded-full pointer-events-none"
               style={{
-                background: 'radial-gradient(ellipse at 30% 25%, rgba(255,255,255,0.2) 0%, transparent 40%)',
+                background: 'radial-gradient(circle, transparent 55%, rgba(59,130,246,0.1) 70%, rgba(96,165,250,0.15) 85%, transparent 100%)',
               }}
             />
           </motion.div>
+
+          {/* Data point markers */}
+          <div className="absolute inset-0">
+            {dataPoints.map(point => {
+              const subject = subjects.find(s => s.id === point.id)
+              if (!subject) return null
+              
+              const pos = getPointPosition(point)
+              const colors = getColorFromScore(subject.marks)
+              
+              if (!pos.visible) return null
+              
+              const scale = 0.5 + (pos.z + 1) * 0.3
+              const opacity = Math.max(0.3, (pos.z + 1) / 2)
+              
+              return (
+                <motion.div
+                  key={point.id}
+                  className="absolute"
+                  style={{
+                    left: pos.x,
+                    top: pos.y,
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: Math.round(pos.z * 100) + 100,
+                  }}
+                  initial={false}
+                  animate={{ scale, opacity }}
+                >
+                  {/* Pulsing ring for at-risk subjects */}
+                  {subject.marks < 35 && (
+                    <motion.div
+                      className="absolute inset-0 rounded-full"
+                      style={{
+                        background: `radial-gradient(circle, ${colors.glow} 0%, transparent 70%)`,
+                        transform: 'translate(-50%, -50%) scale(2)',
+                        left: '50%',
+                        top: '50%',
+                      }}
+                      animate={{
+                        scale: [1, 1.8, 1],
+                        opacity: [0.6, 0, 0.6],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                      }}
+                    />
+                  )}
+                  
+                  {/* Main marker */}
+                  <motion.button
+                    className="relative w-5 h-5 rounded-full border-2 border-white/80 shadow-lg"
+                    style={{
+                      backgroundColor: colors.fill,
+                      boxShadow: `0 0 15px ${colors.glow}`,
+                    }}
+                    whileHover={{ scale: 1.3 }}
+                    onMouseEnter={() => handlePointHover(point, subject, pos.x, pos.y)}
+                    onMouseLeave={handlePointLeave}
+                  >
+                    {/* Inner glow */}
+                    <div 
+                      className="absolute inset-1 rounded-full"
+                      style={{
+                        background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6) 0%, transparent 70%)',
+                      }}
+                    />
+                  </motion.button>
+                  
+                  {/* Label */}
+                  <motion.div
+                    className="absolute top-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap text-xs font-medium text-white/80 bg-slate-900/80 px-2 py-0.5 rounded-full backdrop-blur-sm"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: pos.z > 0.3 ? 1 : 0 }}
+                  >
+                    {point.name.split(' ')[0]}
+                  </motion.div>
+                </motion.div>
+              )
+            })}
+          </div>
         </div>
       </div>
 
       {/* Tooltip */}
       <AnimatePresence>
-        {hoveredContinent && (
+        {hoveredPoint && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="absolute z-50"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="absolute z-50 pointer-events-auto"
             style={{
               left: '50%',
               bottom: '24px',
               transform: 'translateX(-50%)',
             }}
           >
-            <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-blue-500/30 rounded-2xl p-5 w-72 backdrop-blur-xl shadow-2xl shadow-blue-500/10">
+            <div className="bg-gradient-to-br from-slate-900/98 to-slate-800/98 border border-blue-500/40 rounded-2xl p-5 w-80 backdrop-blur-xl shadow-2xl shadow-blue-500/20">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg text-white">{hoveredContinent.name}</h3>
-                <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
-                  {hoveredContinent.subject.code}
+                <div>
+                  <h3 className="font-bold text-lg text-white">{hoveredPoint.name}</h3>
+                  <p className="text-xs text-blue-300/70">{hoveredPoint.region}</p>
+                </div>
+                <Badge 
+                  className="text-xs"
+                  style={{ 
+                    backgroundColor: getColorFromScore(hoveredPoint.subject.marks).fill + '20',
+                    color: getColorFromScore(hoveredPoint.subject.marks).fill,
+                    borderColor: getColorFromScore(hoveredPoint.subject.marks).fill + '40',
+                  }}
+                >
+                  {getColorFromScore(hoveredPoint.subject.marks).status}
                 </Badge>
               </div>
 
-              <div className="space-y-3 text-sm mb-5">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Current Grade</span>
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: getColorFromScore(hoveredContinent.subject.marks).fill }}
-                    />
-                    <span className="font-semibold text-white">{hoveredContinent.subject.marks}%</span>
-                  </div>
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                <div className="text-center p-2 bg-slate-800/50 rounded-xl">
+                  <p className="text-2xl font-bold text-white">{hoveredPoint.subject.marks}%</p>
+                  <p className="text-xs text-slate-400">Grade</p>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Revision Confidence</span>
-                  <span className="font-semibold text-white">{hoveredContinent.subject.revisionConfidence}%</span>
+                <div className="text-center p-2 bg-slate-800/50 rounded-xl">
+                  <p className="text-2xl font-bold text-white">{hoveredPoint.subject.attendance}%</p>
+                  <p className="text-xs text-slate-400">Attendance</p>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Attendance</span>
-                  <span className="font-semibold text-white">{hoveredContinent.subject.attendance}%</span>
+                <div className="text-center p-2 bg-slate-800/50 rounded-xl">
+                  <p className="text-2xl font-bold text-white">{hoveredPoint.subject.revisionConfidence}%</p>
+                  <p className="text-xs text-slate-400">Confidence</p>
                 </div>
-                
-                {/* Mini progress bar */}
-                <div className="pt-2">
-                  <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${hoveredContinent.subject.marks}%` }}
-                      transition={{ duration: 0.5 }}
-                      className="h-full rounded-full"
-                      style={{ backgroundColor: getColorFromScore(hoveredContinent.subject.marks).fill }}
-                    />
-                  </div>
+              </div>
+              
+              {/* Progress bar */}
+              <div className="mb-4">
+                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${hoveredPoint.subject.marks}%` }}
+                    transition={{ duration: 0.5 }}
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: getColorFromScore(hoveredPoint.subject.marks).fill }}
+                  />
                 </div>
               </div>
 
               <Button
                 onClick={handleJumpToMastery}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white border-0"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white border-0"
                 size="sm"
               >
                 Jump to Mastery Path
@@ -407,19 +380,19 @@ export function InteractiveGlobe({ subjects }: GlobeProps) {
       </AnimatePresence>
 
       {/* Legend */}
-      <div className="absolute bottom-4 right-4 z-10 bg-slate-900/80 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
+      <div className="absolute bottom-4 right-4 z-10 bg-slate-900/90 backdrop-blur-md rounded-xl p-4 border border-slate-700/50">
         <p className="text-xs text-slate-400 mb-3 font-medium uppercase tracking-wider">Performance</p>
         <div className="space-y-2 text-xs">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#22c55e] shadow-lg shadow-green-500/30" />
+            <div className="w-3 h-3 rounded-full bg-[#22c55e] shadow-lg shadow-green-500/40" />
             <span className="text-slate-300">Excellent (75%+)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#f59e0b] shadow-lg shadow-amber-500/30" />
+            <div className="w-3 h-3 rounded-full bg-[#f59e0b] shadow-lg shadow-amber-500/40" />
             <span className="text-slate-300">Needs Work (35-74%)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#ef4444] shadow-lg shadow-red-500/30" />
+            <div className="w-3 h-3 rounded-full bg-[#ef4444] shadow-lg shadow-red-500/40" />
             <span className="text-slate-300">At Risk (&lt;35%)</span>
           </div>
         </div>
@@ -428,21 +401,21 @@ export function InteractiveGlobe({ subjects }: GlobeProps) {
       {/* Info overlay */}
       <div className="absolute top-4 left-4 z-10">
         <div className="text-xs space-y-1">
-          <p className="text-blue-300/70">Hover continents to explore</p>
+          <p className="text-blue-300/70">Drag to rotate | Hover markers</p>
           <p className="font-semibold text-white text-sm">Visual Grade Map</p>
         </div>
       </div>
 
       {/* Rotation indicator */}
-      <div className="absolute top-4 right-4 z-10">
-        <motion.div
-          animate={{ rotate: isRotating ? 360 : 0 }}
-          transition={{ duration: 3, repeat: isRotating ? Infinity : 0, ease: 'linear' }}
-          className="w-6 h-6 border-2 border-blue-400/30 rounded-full flex items-center justify-center"
-        >
-          <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-        </motion.div>
-      </div>
+      <motion.div 
+        className="absolute top-4 right-4 z-10"
+        animate={{ rotate: isRotating ? 360 : 0 }}
+        transition={{ duration: 4, repeat: isRotating ? Infinity : 0, ease: 'linear' }}
+      >
+        <div className="w-8 h-8 border-2 border-blue-400/40 rounded-full flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+          <div className="w-2 h-2 rounded-full bg-blue-400" />
+        </div>
+      </motion.div>
     </motion.div>
   )
 }

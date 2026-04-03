@@ -213,6 +213,10 @@ interface DashboardState {
   isMusicPodOpen: boolean
   toggleMusicPod: () => void
   
+  // Premium Modal
+  isPremiumOpen: boolean
+  togglePremium: () => void
+  
   // Actions
   toggleSidebar: () => void
   toggleCommandPalette: () => void
@@ -535,6 +539,10 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   // Music Pod
   isMusicPodOpen: false,
   toggleMusicPod: () => set((state) => ({ isMusicPodOpen: !state.isMusicPodOpen })),
+  
+  // Premium Modal
+  isPremiumOpen: false,
+  togglePremium: () => set((state) => ({ isPremiumOpen: !state.isPremiumOpen })),
   
   // Actions
   toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
