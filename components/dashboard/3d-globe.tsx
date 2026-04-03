@@ -1,5 +1,6 @@
 'use client'
 
+// CSS-based Interactive Globe - no Three.js/WebGL required
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Subject } from '@/lib/mock-data'

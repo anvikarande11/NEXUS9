@@ -1,5 +1,6 @@
 'use client'
 
+// CSS-based 3D Globe Component - no Three.js required
 import React from 'react'
 import { motion } from 'framer-motion'
 import { mockSubjects, type Subject } from '@/lib/mock-data'
